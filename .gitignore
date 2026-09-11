@@ -1,0 +1,26 @@
+# Large / licensed data — never committed
+data/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Notebook backups and test-run copies from the replication process
+*.bak
+*.bak2
+*.bak3
+code/*.bak_*
+code/GNN_model_TEST_*.ipynb
+
+# Run logs
+*.log
+
+# Extracted paper text (not for redistribution)
+paper_text.txt
+appendix_b_page*.txt
+
+# Editor / tooling
+.claude/
+.vscode/
+.DS_Store
