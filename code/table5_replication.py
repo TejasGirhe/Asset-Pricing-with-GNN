@@ -101,15 +101,25 @@ def load_benchmark_long(path: str, value_name: str) -> pd.DataFrame:
 
 
 def build_benchmark_panel_full() -> pd.DataFrame:
-    """PCA + FF5 + NC Ridge + NC LASSO, inner-joined (Variant A). This restricts the
+    """NN2 + NN3 + FF5 + PCA + NC Ridge + NC LASSO, inner-joined (Variant A) -- the
+    paper's full Table 5 benchmark menu (six non-graph benchmarks). This restricts the
     universe to the ~37 firms NC Ridge/LASSO ever cover, and within the OOS window
-    those files are non-missing for only ~2 firms/month on average."""
+    those files are non-missing for only ~2 firms/month on average.
+
+    NN2/NN3 (2- and 3-hidden-layer feed-forward MLPs over the 64 firm characteristics,
+    target = mthret - rf, train/test split at 201612, 40 neurons/layer, 80 epochs) are
+    produced by code/build_nn_benchmarks.py -> data/firm_level_NN{2,3}_predictions_ALL_firms.csv,
+    wide format identical to the PCA/FF5 files."""
+    nn2 = load_benchmark_long(f"{DATA}/firm_level_NN2_predictions_ALL_firms.csv", "nn2_pred")
+    nn3 = load_benchmark_long(f"{DATA}/firm_level_NN3_predictions_ALL_firms.csv", "nn3_pred")
     pca = load_benchmark_long(f"{DATA}/firm_level_reg_pca_predictions_ALL_firms.csv", "pca_pred")
     ff5 = load_benchmark_long(f"{DATA}/firm_level_reg_ff5_predictions_ALL_firms.csv", "ff5_pred")
     ridge = load_benchmark_long(f"{DATA}/firm_level_NC_ridge_predictions_ALL_firms.csv", "ncridge_pred")
     lasso = load_benchmark_long(f"{DATA}/firm_level_NC_lasso_predictions_ALL_firms.csv", "nclasso_pred")
 
-    z = pca.merge(ff5, on=["gvkey", "yyyymm"], how="inner")
+    z = nn2.merge(nn3, on=["gvkey", "yyyymm"], how="inner")
+    z = z.merge(pca, on=["gvkey", "yyyymm"], how="inner")
+    z = z.merge(ff5, on=["gvkey", "yyyymm"], how="inner")
     z = z.merge(ridge, on=["gvkey", "yyyymm"], how="inner")
     z = z.merge(lasso, on=["gvkey", "yyyymm"], how="inner")
     return z
@@ -123,7 +133,7 @@ def build_benchmark_panel_broad() -> pd.DataFrame:
     return pca.merge(ff5, on=["gvkey", "yyyymm"], how="inner")
 
 
-BENCH_COLS_FULL = ["pca_pred", "ff5_pred", "ncridge_pred", "nclasso_pred"]
+BENCH_COLS_FULL = ["nn2_pred", "nn3_pred", "pca_pred", "ff5_pred", "ncridge_pred", "nclasso_pred"]
 BENCH_COLS_BROAD = ["pca_pred", "ff5_pred"]
 
 
@@ -263,8 +273,8 @@ def main():
     # portfolio Sharpe ratio is not computable / not meaningful here.
     # ------------------------------------------------------------------
     print("=" * 100)
-    print("VARIANT A: joint spanning regression on FULL paper benchmark set minus NN2/NN3")
-    print("z_it = {PCA, FF5, NC Ridge, NC LASSO}  (NN2, NN3 omitted -- unavailable, see docstring)")
+    print("VARIANT A: joint spanning regression on the FULL paper Table 5 benchmark menu")
+    print("z_it = {NN2, NN3, FF5, PCA, NC Ridge, NC LASSO}  (all six benchmarks -- matches the paper)")
     print("=" * 100)
     rows_a = []
     for d in DEPTHS:
@@ -299,7 +309,7 @@ def main():
     # ------------------------------------------------------------------
     print("\n" + "=" * 100)
     print("VARIANT B: joint spanning regression on BROAD-COVERAGE subset (real decile sort possible)")
-    print("z_it = {PCA, FF5}  (NC Ridge, NC LASSO, NN2, NN3 omitted -- see docstring)")
+    print("z_it = {PCA, FF5}  (NN2, NN3, NC Ridge, NC LASSO omitted -- restrict universe too much)")
     print("=" * 100)
     rows_b = []
     for d in DEPTHS:
