@@ -30,7 +30,14 @@ Paper reference (paper_text.txt):
     reference cell 45, which computes the residual "NO_intercept": gnn_pred - b_hat*mlp_pred,
     consistent with the paper equation directly under Table 2, and Table 5's caption which
     repeats the identical formula.)
-  - Newey-West lag 12, OOS window Jan 2017 - Jan 2024: lines 1026-1028.
+  - Newey-West lag: the paper text (lines 1026-1028) states "lag length 12" explicitly.
+    The authors' own spanning-regression code (SupplyChainAssetPricing/Code/GNN_code_additional.ipynb,
+    cells 41/45) instead uses an automatic Newey-West/Andrews-style rule
+    (nw_lags = floor(4*(T/100)**(2/9)), giving nw_lags=3 for our ~85-month OOS window) --
+    but per project decision we follow the paper's stated methodology over the reference
+    code wherever the two disagree, so NW_LAGS is fixed at 12 as the paper specifies. This
+    only affects the intercept's standard error/t-stat, not the Sharpe ratio itself.
+  - OOS window Jan 2017 - Jan 2024: lines 1026-1028.
   - Eq. (23) decile long-short construction, lines 1213-1240 (reused from GNN model.ipynb's
     decile_portfolio function, same logic, equal-weighted decile spread R10 - R1).
   - Table 5 target values (lines 1262-1293, 1309-1310):
@@ -57,7 +64,7 @@ DATA = "../data"
 DEPTHS = [1, 2, 3, 4, 6, 10]
 EMBED_DIM = 40  # matches the config used to produce pca_asset_pricing_factors_*_dim_40 files
 OOS_START, OOS_END = 201701, 202401  # inclusive, per paper lines 1027-1028 / 1233
-NW_LAGS = 12  # paper line 1026: "Newey-West t-statistic (with lag length 12)"
+NW_LAGS = 12  # paper line 1026: "Newey-West t-statistic (with lag length 12)" -- see module docstring
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +248,8 @@ def run_depth(depth: int, benchmark_panel: pd.DataFrame, realized: pd.DataFrame,
         "n_firms": n_firms,
         "avg_firms_per_month": avg_firms_per_month,
         "a_hat": a_hat,
-        "a_tstat_NW12": a_t,
+        "a_tstat_NW": a_t,
+        "nw_lags": NW_LAGS,
         "R2": r2,
         "F_n_months": f_n_months,
         "mean": mean_ret,
@@ -283,7 +291,7 @@ def main():
         except Exception as e:
             print(f"depth={d} FAILED: {e}")
     results_a = pd.DataFrame(rows_a).set_index("depth")
-    print(results_a[["n_obs", "n_months", "avg_firms_per_month", "a_hat", "a_tstat_NW12", "R2"]])
+    print(results_a[["n_obs", "n_months", "avg_firms_per_month", "a_hat", "a_tstat_NW", "nw_lags", "R2"]])
     print("\nPortfolio sort feasibility (avg firms/month vs 10 needed for deciles):")
     print(results_a[["avg_firms_per_month", "F_n_months", "sharpe"]])
     # This used to be a hardcoded "coverage is too sparse (~2 firms/month), Sharpe ratios
@@ -318,7 +326,7 @@ def main():
         except Exception as e:
             print(f"depth={d} FAILED: {e}")
     results_b = pd.DataFrame(rows_b).set_index("depth")
-    print(results_b[["n_obs", "n_months", "avg_firms_per_month", "a_hat", "a_tstat_NW12", "R2"]])
+    print(results_b[["n_obs", "n_months", "avg_firms_per_month", "a_hat", "a_tstat_NW", "nw_lags", "R2"]])
     print("\nTable 5 analogue -- Sharpe ratio of long-short portfolio on residualized GNN pred:")
     print(results_b[["F_n_months", "mean", "vol", "sharpe"]])
 
